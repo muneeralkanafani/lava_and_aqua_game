@@ -1,4 +1,3 @@
-from copy import deepcopy
 from element import GameElement, ElementType, GameState
 
 class Direction:
@@ -15,7 +14,6 @@ class GameEngine:
             Direction.LEFT: (-1, 0),
             Direction.RIGHT: (1, 0)
         }
-        self.last_death_state = None
     
     def transition_model(self, state, action):
         """
@@ -25,45 +23,36 @@ class GameEngine:
         # End the game (return None) if the action is not in directions
         if action not in self.directions:
             return None
-        # Create a deep copy of the current state (new_elements)
-        new_elements = deepcopy(state.elements)
+        # Calculate direction
         dx, dy = self.directions[action]
-        # Find the player and end the game (return None) if there is no player
-        player_position = None
-        for position, element in new_elements.items():
-            if element.properties.get('player', False) == True:
-                player_position = position
-                break
+        # End the game (return None) if there is no player
+        player_position = state.player_position
         if player_position is None:
             return None
-        # Calculate player new position (new_position)
+        # Calculate player new position
         new_position = (player_position[0] + dx, player_position[1] + dy)
-        # Check if the move is valid (return the old state if the move is not valid)
+        # Check if the move is valid (return None if not)
         if not self.is_valid_move(state, new_position, (dx, dy)):
-            return state
-        # Handle block pushing
-        self.push_block(new_elements, new_position, (dx, dy))
+            return None
+        # Copy the element (new_elements)
+        new_elements = self.fast_copy_elements(state.elements)
         # Move the player to the new position
         new_elements[player_position].properties['player'] = False
         if new_position in new_elements:
             new_elements[new_position].properties['player'] = True
         else:
-            new_elements[new_position] = GameElement(
-                ElementType.EMPTY, 
-                new_position, 
-                {'player': True}
-            )
+            new_elements[new_position] = GameElement(ElementType.EMPTY, new_position, {'player': True})
         # Remove the GOAL ORB if the player on it
         if new_elements[new_position].properties.get('goal_orb', False):
             new_elements[new_position].properties['goal_orb'] = False
-        # Update numbered blocks (decrement moves)
-        self.update_numbered_blocks(new_elements)
-        # Update LAVA blocks (spread)
-        self.update_lava_blocks(new_elements)
-        # Update AQUA blocks (spread)
-        self.update_aqua_blocks(new_elements)
-        # Create new state and return it
-        new_state = GameState(
+        # Handle block pushing if necessary
+        self.push_block(new_elements, new_position, (dx, dy))        
+        # Update blocks (numbered - lava - aqua)
+        self.update_numbered_blocks(new_elements, state.numbered_block_positions)
+        self.update_lava_blocks(new_elements, state.lava_positions)
+        self.update_aqua_blocks(new_elements, state.aqua_positions)
+        # Return new state
+        return GameState(
             elements=new_elements,
             width=state.width,
             height=state.height,
@@ -71,8 +60,25 @@ class GameEngine:
             action=action,
             path_cost=state.path_cost + 1
         )
-        return new_state
     
+    def all_valid_moves(self, state):
+        """
+        check all the four moves up, down, left and right
+        which can be valid
+        """
+        if state.player_position is None:
+            return []
+        all_valid_move = []
+        for direction in self.directions:
+            dx, dy = self.directions[direction]
+            new_position = (state.player_position[0] + dx, state.player_position[1] + dy)
+            can_move = self.is_valid_move(state, new_position, (dx, dy))
+            if can_move:
+                all_valid_move.append(direction)
+            else:
+                continue
+        return all_valid_move
+
     def is_valid_move(self, state, new_position, direction):
         """
         Check if moving to new position is valid
@@ -86,18 +92,13 @@ class GameEngine:
         target_element = state.elements.get(new_position)
         if target_element is None:
             return True
-        elif (target_element.type in [ElementType.WALL, ElementType.NUMBERED_BLOCK]
+        if (target_element.type in [ElementType.WALL, ElementType.NUMBERED_BLOCK]
               or target_element.properties.get('lava_wall', False)
               ):
             return False
         elif target_element.type == ElementType.MOVABLE_BLOCK:
             return self.can_push_block(state, new_position, direction)
-        elif (target_element.type in [ElementType.EMPTY, ElementType.AQUA, ElementType.LAVA] 
-              or target_element.properties.get('goal', False)
-              or target_element.properties.get('goal_orb', False)
-              ):
-            return True
-        return False
+        return True
     
     def can_push_block(self, state, block_position, direction):
         """
@@ -114,18 +115,15 @@ class GameEngine:
         target_element = state.elements.get(new_block_position)
         if target_element is None:
             return True
-        elif target_element.properties.get('lava_wall', False): 
-            return False
         elif (target_element.type in [
             ElementType.WALL,
             ElementType.MOVABLE_BLOCK,
             ElementType.NUMBERED_BLOCK] 
             or target_element.properties.get('goal', False)
+            or target_element.properties.get('lava_wall', False)
             ):
             return False
-        elif target_element.type in [ElementType.AQUA, ElementType.LAVA, ElementType.EMPTY]:
-            return True
-        return False
+        return True
     
     def push_block(self, elements, new_position, direction):
         """
@@ -151,89 +149,78 @@ class GameEngine:
             else:
                 elements[block_new_position].type = ElementType.MOVABLE_BLOCK
     
-    def update_numbered_blocks(self, elements):
+    def update_numbered_blocks(self, elements, numbered_position):
         """Decrement moves on numbered blocks and remove if zero"""
         blocks_to_remove = []
-        for position, element in elements.items():
-            if element.type == ElementType.NUMBERED_BLOCK:
-                element.properties['moves_remaining'] -= 1
-                if element.properties['moves_remaining'] <= 0:
+        for position in numbered_position:
+            block = elements.get(position)
+            if block:
+                block.properties['moves_remaining'] -= 1
+                if block.properties['moves_remaining'] <= 0:
                     blocks_to_remove.append(position)
         # Remove the blocks when the numbered block hits zero
         for position in blocks_to_remove:
             del elements[position]
 
-    def update_lava_blocks(self, elements):
+    def update_lava_blocks(self, elements, lava_positions):
         """Make the lave blocks spread up, down, left and right"""
-        # Find all lava blocks
-        lava_positions = []
-        for position, element in elements.items():
-            if element.type == ElementType.LAVA:
-                lava_positions.append(position)
         # Find the new lava blocks 
-        new_lava_to_add = []
-        positions_to_remove = []
+        new_lava_to_add = set()
+        positions_to_remove = set()
         for lava_position in lava_positions:
-            directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+            if elements.get(lava_position).type == ElementType.MOVABLE_BLOCK:
+                continue
             # Check for each direction to the LAVA block if it can spread
-            for dx, dy in directions:
+            for dx, dy in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
                 new_position = (lava_position[0] + dx, lava_position[1] + dy)
-                if (new_position in elements 
-                    and elements[new_position].type == ElementType.LAVA 
-                    and elements[new_position].properties.get('player', False)):
-                    new_lava_to_add.append(new_position)
-                elif new_position in elements and elements[new_position].type == ElementType.LAVA:
-                    continue
                 target_element = elements.get(new_position)
                 if target_element is None:
-                    new_lava_to_add.append(new_position)
+                    new_lava_to_add.add(new_position)
+                elif (target_element.type == ElementType.LAVA 
+                    and target_element.properties.get('player', False)):
+                    new_lava_to_add.add(new_position)
                 elif target_element.type in [
                     ElementType.WALL,
                     ElementType.MOVABLE_BLOCK,
                     ElementType.NUMBERED_BLOCK,
+                    ElementType.LAVA
                 ]:
                     continue
                 elif (target_element.properties.get('lava_wall', False)
                      or target_element.properties.get('goal_orb', False)
                      or target_element.properties.get('goal', False)
                      ):
-                    positions_to_remove.append(new_position)
+                    positions_to_remove.add(new_position)
                 elif (target_element.properties.get('player', False)
                       or target_element.type == ElementType.EMPTY
                       ):
-                    new_lava_to_add.append(new_position)
+                    new_lava_to_add.add(new_position)
         for position in positions_to_remove:
             if position in elements:
                 elements[position].type = ElementType.LAVA
         for position in new_lava_to_add:
             elements[position] = GameElement(ElementType.LAVA, position)
-        return len(new_lava_to_add)
     
-    def update_aqua_blocks(self, elements):
+    def update_aqua_blocks(self, elements, aqua_positions):
         """Make the aqua blocks spread up, down, left and right"""
-        # Find all aqua blocks
-        aqua_positions = []
-        for position, element in elements.items():
-            if element.type == ElementType.AQUA:
-                aqua_positions.append(position)
         # Find the new aqua blocks
-        new_aqua_to_add = []
-        positions_to_steam = []
-        positions_to_remove = []
+        new_aqua_to_add = set()
+        positions_to_steam = set()
+        positions_to_remove = set()
         for aqua_position in aqua_positions:
-            directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+            if elements.get(aqua_position).type == ElementType.MOVABLE_BLOCK:
+                continue
             # Check for each direction to the AQUA block if it can spread
-            for dx, dy in directions:
+            for dx, dy in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
                 new_position = (aqua_position[0] + dx, aqua_position[1] + dy)
-                if new_position in elements and elements[new_position].type == ElementType.AQUA:
-                    continue
                 target_element = elements.get(new_position)
                 if target_element is None:
-                    new_aqua_to_add.append(new_position)
+                    new_aqua_to_add.add(new_position)
                 elif target_element.type in [
                     ElementType.WALL,
                     ElementType.MOVABLE_BLOCK,
                     ElementType.NUMBERED_BLOCK,
+                    ElementType.AQUA
                 ]:
                     continue
                 elif (target_element.properties.get('lava_wall', False)
@@ -241,12 +228,11 @@ class GameEngine:
                       or target_element.properties.get('player', False) 
                       or target_element.properties.get('goal', False)
                       ):
-                    positions_to_remove.append(new_position)
+                    positions_to_remove.add(new_position)
                 elif target_element.type == ElementType.EMPTY:
-                    new_aqua_to_add.append(new_position)
+                    new_aqua_to_add.add(new_position)
                 elif target_element.type == ElementType.LAVA:
-                    positions_to_steam.append(new_position)
-                
+                    positions_to_steam.add(new_position)
         for position in positions_to_remove:
             if position in elements:
                 elements[position].type = ElementType.AQUA
@@ -254,24 +240,24 @@ class GameEngine:
             elements[position] = GameElement(ElementType.WALL, position)
         for position in new_aqua_to_add:
             elements[position] = GameElement(ElementType.AQUA, position)
-        return len(new_aqua_to_add)
     
     def is_player_dead(self, state):
         """Check if player was killed by lava (no player found in elements)"""
-        player_found = False
-        for position, element in state.elements.items():
-            if element.properties.get('player', False):
-                player_found = True
-                break
-        return not player_found
+        if state.player_position == None:
+            return True
+        return False
     
     def goal_test(self, state):
         """Check if the player reached the goal - returns True if yes"""
-        # Find all GOAL ORB
-        for position, element in state.elements.items():
-            if element.properties.get('goal_orb', False):
-                return False
-        # Check if the player on the goal
-        for position, element in state.elements.items():
-            if element.properties.get('player', False) and element.properties.get('goal', False):
-                return True
+        # Check if the player on the goal and no goal orb
+        if len(state.goal_orb_position) != 0:
+            return False
+        if state.player_position == state.goal_position:
+            return True
+        
+    def fast_copy_elements(self, elements):
+        return {
+            pos: GameElement(e.type, e.position, e.properties.copy())
+            for pos, e in elements.items()
+        }
+

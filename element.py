@@ -30,6 +30,40 @@ class GameState:
         self.action = action
         self.path_cost = path_cost
         self._hash = None
+        self.player_position = None
+        self.goal_position = None
+        self.lava_positions = set()
+        self.aqua_positions = set()
+        self.numbered_block_positions = set()
+        self.goal_orb_position = set()
+
+        for position, element in self.elements.items():
+            props = element.properties
+            if props.get("player", False):
+                self.player_position = position
+            if props.get("goal_orb", False):
+                self.goal_orb_position.add(position)
+            if props.get("goal", False):
+                self.goal_position = position
+            if element.type == ElementType.LAVA:
+                self.lava_positions.add(position)
+            elif element.type == ElementType.AQUA:
+                self.aqua_positions.add(position)
+            elif element.type == ElementType.NUMBERED_BLOCK:
+                self.numbered_block_positions.add(position)
+    
+    def __hash__(self):
+        if self._hash is None:
+            # hash only element types & important properties
+            items = tuple(sorted(
+                (pos, e.type, tuple(sorted(e.properties.items())))
+                for pos, e in self.elements.items()
+            ))
+            self._hash = hash(items)
+        return self._hash
+
+    def __eq__(self, other):
+        return hash(self) == hash(other)
 
 class LevelLoader:
     def load_level(filename: str) -> GameState:

@@ -4,10 +4,10 @@ from algorithm_mode import AlgorithmMode
 
 def main():
     argc = len(sys.argv)
-    if argc not in [2, 4]:
+    if argc not in [2, 3]:
         print("Missing command line arguments")
         print("First Usage:  python ./main.py level.csv")
-        print("Second Usage: python ./main.py level.csv algorithm duration")
+        print("Second Usage: python ./main.py level.csv algorithm")
         sys.exit(1)
     level_file = f"levels/{sys.argv[1]}"
     try:
@@ -18,8 +18,7 @@ def main():
         else:
             # * Algorithm mode
             algorithm = sys.argv[2]
-            duration = float(sys.argv[3])
-            algorithm_mode = AlgorithmMode(level_file, algorithm, duration)
+            algorithm_mode = AlgorithmMode(level_file, algorithm)
             algorithm_mode.run()
     except Exception as e:
         print(f"Error: {e}")
