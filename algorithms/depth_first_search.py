@@ -18,7 +18,7 @@ class DepthFirstSearch:
         start_time = time.time()
         status = [self.initial_state]
         visited = set()
-        visited.add(hash(self.initial_state))
+        visited.add(self.initial_state)
         self.generated_states += 1
         player_win = False
 
@@ -35,9 +35,8 @@ class DepthFirstSearch:
                 add_state = self.engine.transition_model(current_state, direction)
                 if add_state is None:
                     continue
-                h = hash(add_state)
-                if h not in visited:
-                    visited.add(h)
+                if add_state not in visited:
+                    visited.add(add_state)
                     status.append(add_state)
                     self.generated_states += 1
             # self.render_each_step(current_state)

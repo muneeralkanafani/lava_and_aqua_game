@@ -48,7 +48,7 @@ class GameEngine:
         # Handle block pushing if necessary
         self.push_block(new_elements, new_position, (dx, dy))        
         # Update blocks (numbered - lava - aqua)
-        self.update_numbered_blocks(new_elements, state.numbered_block_positions)
+        self.update_numbered_blocks(new_elements, state.numbered_blocks)
         self.update_lava_blocks(new_elements, state.lava_positions)
         self.update_aqua_blocks(new_elements, state.aqua_positions)
         # Return new state
@@ -249,11 +249,7 @@ class GameEngine:
     
     def goal_test(self, state):
         """Check if the player reached the goal - returns True if yes"""
-        # Check if the player on the goal and no goal orb
-        if len(state.goal_orb_position) != 0:
-            return False
-        if state.player_position == state.goal_position:
-            return True
+        return state.player_position == state.goal_position and len(state.goal_orb_position) == 0
         
     def fast_copy_elements(self, elements):
         return {

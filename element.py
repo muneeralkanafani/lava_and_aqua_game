@@ -34,8 +34,9 @@ class GameState:
         self.goal_position = None
         self.lava_positions = set()
         self.aqua_positions = set()
-        self.numbered_block_positions = set()
         self.goal_orb_position = set()
+        self.movable_blocks = set()
+        self.numbered_blocks = {}
 
         for position, element in self.elements.items():
             props = element.properties
@@ -49,21 +50,43 @@ class GameState:
                 self.lava_positions.add(position)
             elif element.type == ElementType.AQUA:
                 self.aqua_positions.add(position)
+            elif element.type == ElementType.MOVABLE_BLOCK:
+                self.movable_blocks.add(position)
             elif element.type == ElementType.NUMBERED_BLOCK:
-                self.numbered_block_positions.add(position)
+                self.numbered_blocks[position] = element.properties.get("moves_remaining", 0)
+            
     
     def __hash__(self):
-        if self._hash is None:
-            # hash only element types & important properties
-            items = tuple(sorted(
-                (pos, e.type, tuple(sorted(e.properties.items())))
-                for pos, e in self.elements.items()
-            ))
-            self._hash = hash(items)
+        if self._hash is not None:
+            return self._hash
+
+        # Create a canonical, immutable representation
+        data = (
+            self.player_position,
+            tuple(sorted(self.goal_position)),
+            tuple(sorted(self.goal_orb_position)),
+            tuple(sorted(self.lava_positions)),
+            tuple(sorted(self.aqua_positions)),
+            tuple(sorted(self.movable_blocks)),
+            tuple(sorted((pos, moves) for pos, moves in self.numbered_blocks.items()))
+        )
+
+        self._hash = hash(data)
         return self._hash
 
     def __eq__(self, other):
-        return hash(self) == hash(other)
+        if not isinstance(other, GameState):
+            return False
+
+        return (
+            self.player_position == other.player_position and
+            self.goal_position == other.goal_position and
+            self.goal_orb_position == other.goal_orb_position and
+            self.lava_positions == other.lava_positions and
+            self.aqua_positions == other.aqua_positions and
+            self.movable_blocks == other.movable_blocks and
+            self.numbered_blocks == other.numbered_blocks
+        )
 
 class LevelLoader:
     def load_level(filename: str) -> GameState:
