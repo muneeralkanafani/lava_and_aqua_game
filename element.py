@@ -63,12 +63,12 @@ class GameState:
         # Create a canonical, immutable representation
         data = (
             self.player_position,
-            tuple(sorted(self.goal_position)),
-            tuple(sorted(self.goal_orb_position)),
-            tuple(sorted(self.lava_positions)),
-            tuple(sorted(self.aqua_positions)),
-            tuple(sorted(self.movable_blocks)),
-            tuple(sorted((pos, moves) for pos, moves in self.numbered_blocks.items()))
+            tuple(sorted(self.goal_position)) if self.goal_position else tuple(),
+            tuple(sorted(self.goal_orb_position)) if self.goal_orb_position else tuple(),
+            tuple(sorted(self.lava_positions)) if self.lava_positions else tuple(),
+            tuple(sorted(self.aqua_positions)) if self.aqua_positions else tuple(),
+            tuple(sorted(self.movable_blocks)) if self.movable_blocks else tuple(),
+            tuple(sorted((pos, moves) for pos, moves in self.numbered_blocks.items())) if self.numbered_blocks else tuple()
         )
 
         self._hash = hash(data)

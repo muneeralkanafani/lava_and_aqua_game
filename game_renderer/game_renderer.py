@@ -1,3 +1,4 @@
+import time
 import pygame
 from .element_drawer import ElementDrawer
 
@@ -121,6 +122,50 @@ class GameRenderer:
         instruction_text = instruction_font.render("Press R to restart or ESC to quit or U to undo", True, (200, 200, 200))
         instruction_rect = instruction_text.get_rect(center=(self.screen.get_width() // 2, text_rect.bottom + 40))
         self.screen.blit(instruction_text, instruction_rect)
+
+    def render_win_path(self, level_file, algorithm_name, states_explored, generated_states, goal_state, path_cost, elapsed_time):
+        actions = []
+        states = []
+        current = goal_state
+        clock = pygame.time.Clock()
+
+        while current.parent is not None:
+            actions.append(current.action)
+            states.append(current)
+            current = current.parent
+
+        states.append(current)
+
+        actions.reverse()
+        states.reverse()
+
+        for current_state in states:
+            status_text = f"moves: {current_state.path_cost}"
+            self.render(current_state, status_text)
+            time.sleep(0.2)
+
+        keep_window_open = True
+        while keep_window_open:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    keep_window_open = False
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        keep_window_open = False
+            status_text = f"moves: {current_state.path_cost}"
+            message = f"path cost {current_state.path_cost} - time {elapsed_time} - states explored {states_explored}"
+            self.render_with_message(current_state, status_text, message)
+            clock.tick(60)
+        pygame.quit()
+
+        print("-"*100)
+        print(f"the level: {level_file}")
+        print(f"the algorithm: {algorithm_name}")
+        print(f"path cost: {path_cost}")
+        print(f"time: {elapsed_time}")
+        print(f"state explored: {states_explored}")
+        print(f"state generated: {generated_states}")
+        print("-"*100)
 
     def get_element_color(self, element_type):
         """Get the color for a specific element type"""

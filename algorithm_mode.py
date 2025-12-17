@@ -1,5 +1,7 @@
 from algorithms.breadth_first_search import BreadthFirstSearch
 from algorithms.depth_first_search import DepthFirstSearch
+from algorithms.hill_climbing import HillClimbing
+from algorithms.uniform_cost_search import UniformCostSearch
 from game_renderer.game_renderer import GameRenderer
 from game_engine import GameEngine
 
@@ -18,3 +20,9 @@ class AlgorithmMode:
         elif the_algorithm in ["bfs", "breadth first search"]:
             bfs = BreadthFirstSearch(self.level_file)
             bfs.run()
+        elif the_algorithm in ["ucs", "uniform cost search"]:
+            ucs = UniformCostSearch(self.level_file)
+            ucs.run()
+        elif the_algorithm in ["hc", "hill climbing"]:
+            hc = HillClimbing(self.level_file)
+            hc.run()

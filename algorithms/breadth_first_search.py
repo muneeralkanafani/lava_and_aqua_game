@@ -1,4 +1,3 @@
-import pygame
 import element
 import time
 from collections import deque
@@ -6,7 +5,7 @@ from game_engine import GameEngine
 from game_renderer.game_renderer import GameRenderer
 
 class BreadthFirstSearch:
-    def __init__(self, level_file,algorithm_name="BFS"):
+    def __init__(self, level_file, algorithm_name="BFS"):
         self.renderer = GameRenderer(cell_size=60)
         self.engine = GameEngine()
         self.level_file = level_file
@@ -32,13 +31,13 @@ class BreadthFirstSearch:
             all_valid_move = self.engine.all_valid_moves(current_state)
             if all_valid_move is None:
                 continue
-            for direction in all_valid_move:
-                add_state = self.engine.transition_model(current_state, direction)
-                if add_state is None:
+            for action in all_valid_move:
+                new_state = self.engine.transition_model(current_state, action)
+                if new_state is None:
                     continue
-                if add_state not in visited:
-                    visited.add(add_state)
-                    status.append(add_state)
+                if new_state not in visited:
+                    visited.add(new_state)
+                    status.append(new_state)
                     self.generated_states += 1
             # self.render_each_step(current_state)
         
@@ -46,51 +45,13 @@ class BreadthFirstSearch:
         elapsed_time = end_time - start_time
 
         if player_win:
-            self.render_win_path(current_state, current_state.path_cost, elapsed_time)
-
-    def render_win_path(self, goal_state, path_cost, elapsed_time):
-        actions = []
-        states = []
-        current = goal_state
-        clock = pygame.time.Clock()
-
-        while current.parent is not None:
-            actions.append(current.action)
-            states.append(current)
-            current = current.parent
-
-        states.append(current)
-
-        actions.reverse()
-        states.reverse()
-
-        for current_state in states:
-            status_text = f"moves: {current_state.path_cost}"
-            self.renderer.render(current_state, status_text)
-            time.sleep(0.2)
-
-        keep_window_open = True
-        while keep_window_open:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    keep_window_open = False
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        keep_window_open = False
-            status_text = f"moves: {current_state.path_cost}"
-            message = f"path cost {current_state.path_cost} - time {elapsed_time} - states explored {self.states_explored}"
-            self.renderer.render_with_message(current_state, status_text, message)
-            clock.tick(60)
-        pygame.quit()
-
-        print("-"*100)
-        print(f"the level: {self.level_file}")
-        print(f"the algorithm: {self.algorithm_name}")
-        print(f"path cost: {path_cost}")
-        print(f"time: {elapsed_time}")
-        print(f"state explored: {self.states_explored}")
-        print(f"state generated: {self.generated_states}")
-        print("-"*100)
+            self.renderer.render_win_path(self.level_file,
+                                          self.algorithm_name,
+                                          self.states_explored,
+                                          self.generated_states,
+                                          current_state,
+                                          current_state.path_cost,
+                                          elapsed_time)
 
     def render_each_step(self, state):
         status_text = f"moves: {state.path_cost}"
