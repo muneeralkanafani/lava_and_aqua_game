@@ -30,11 +30,7 @@ class PlayerMode:
         all_valid_moves = self.engine.all_valid_moves(self.current_state)
         status_text = f"Moves: {self.current_state.path_cost}.  "
         if all_valid_moves:
-            for move_names in all_valid_moves:
-                # move_names.append(move_names.key)
-                status_text += " ".join(move_names)
-            # move_names = [move.names for move in all_valid_moves]
-            # status_text += ", ".join(str(all_valid_moves))
+            status_text += " - ".join(all_valid_moves)
         else:
             status_text += "no valid moves"
         message = None
