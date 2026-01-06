@@ -16,9 +16,9 @@ class DepthFirstSearch:
         self.initial_state = element.LevelLoader.load_level(self.level_file)
         start_time = time.time()
         status = [self.initial_state]
+        self.generated_states += 1
         visited = set()
         visited.add(self.initial_state)
-        self.generated_states += 1
         player_win = False
 
         while status:

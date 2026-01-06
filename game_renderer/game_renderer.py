@@ -32,17 +32,13 @@ class GameRenderer:
         """Main render function - draws the entire game state"""
         if self.screen is None:
             self.initialize_screen(game_state)
-        # Draw the grid background
         self.draw_grid(game_state)
-        # Draw all game elements
         for position, element in game_state.elements.items():
             self.draw_element(position, element)
-        # Draw additional text if provided
         if additional_text:
             self.draw_text(additional_text)
-        # Update the display
         pygame.display.flip()
-    
+
     def initialize_screen(self, game_state):
         """Create the pygame screen based on game state dimensions"""
         screen_width = game_state.width * (self.cell_size + self.margin) + self.margin
@@ -50,11 +46,10 @@ class GameRenderer:
         self.screen = pygame.display.set_mode((screen_width, screen_height))
         pygame.display.set_caption("LAVA AND AQUA GAME")
         return self.screen
-    
+
     def draw_grid(self, game_state):
         """Draw the background grid"""
         self.screen.fill(self.colors['BACKGROUND'])
-        # Draw grid lines
         for x in range(game_state.width + 1):
             line_x = x * (self.cell_size + self.margin)
             pygame.draw.line(
@@ -77,7 +72,7 @@ class GameRenderer:
     def draw_element(self, position, element):
         """Draw a single game element"""
         self.element_drawer.draw_element(self, position, element)
-    
+
     def draw_text(self, text):
         """Draw text at the top of the screen"""
         text_surface = self.font.render(text, True, (255, 255, 255))
@@ -86,25 +81,19 @@ class GameRenderer:
 
     def render_with_message(self, game_state, status_text, message=None):
         """Render the game state with message (optional) when game over or victory"""
-        # Regular rendering
         self.render(game_state, status_text)
-        # Draw centered message if provided
         if message:
             self.draw_centered_message(message)
-        # Update display
         pygame.display.flip()
 
     def draw_centered_message(self, message, background_color=(0, 0, 0, 180), text_color=(255, 255, 255)):
         """Draw a centered message box with transparent background"""
-        # Create a semi-transparent overlay
         overlay = pygame.Surface((self.screen.get_width(), self.screen.get_height()), pygame.SRCALPHA)
         overlay.fill(background_color)
         self.screen.blit(overlay, (0, 0))
-        # Create message text
         font = pygame.font.Font(None, 48)
         text = font.render(message, True, text_color)
         text_rect = text.get_rect(center=(self.screen.get_width() // 2, self.screen.get_height() // 2))
-        # Create a background box for the text
         box_padding = 20
         box_rect = pygame.Rect(
             text_rect.left - box_padding,
@@ -112,12 +101,9 @@ class GameRenderer:
             text_rect.width + 2 * box_padding,
             text_rect.height + 2 * box_padding
         )
-        # Draw the box
         pygame.draw.rect(self.screen, (50, 50, 50), box_rect, border_radius=10)
         pygame.draw.rect(self.screen, (200, 200, 200), box_rect, width=2, border_radius=10)
-        # Draw the text
         self.screen.blit(text, text_rect)
-        # Add instruction text
         instruction_font = pygame.font.Font(None, 24)
         instruction_text = instruction_font.render("Press R to restart or ESC to quit or U to undo", True, (200, 200, 200))
         instruction_rect = instruction_text.get_rect(center=(self.screen.get_width() // 2, text_rect.bottom + 40))
@@ -128,22 +114,17 @@ class GameRenderer:
         states = []
         current = goal_state
         clock = pygame.time.Clock()
-
         while current.parent is not None:
             actions.append(current.action)
             states.append(current)
             current = current.parent
-
         states.append(current)
-
         actions.reverse()
         states.reverse()
-
         for current_state in states:
             status_text = f"moves: {current_state.path_cost}"
             self.render(current_state, status_text)
             time.sleep(0.2)
-
         keep_window_open = True
         while keep_window_open:
             for event in pygame.event.get():
@@ -157,7 +138,6 @@ class GameRenderer:
             self.render_with_message(current_state, status_text, message)
             clock.tick(60)
         pygame.quit()
-
         print("-"*100)
         print(f"the level: {level_file}")
         print(f"the algorithm: {algorithm_name}")
@@ -170,7 +150,7 @@ class GameRenderer:
     def get_element_color(self, element_type):
         """Get the color for a specific element type"""
         return self.colors.get(element_type.name, self.colors['EMPTY'])
-    
+
     def close(self):
         """Close the pygame window"""
         pygame.quit()

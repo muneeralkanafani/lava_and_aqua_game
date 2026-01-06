@@ -18,6 +18,7 @@ class HillClimbing:
         initial_node = Node(state=initial_state, cost=self.heuristic(initial_state))
         pq = PriorityQueue()
         pq.put(initial_node)
+        self.generated_states += 1
         best_cost = {initial_node.state: initial_node.cost}
         visited = set()
         start_time = time.time()

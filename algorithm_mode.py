@@ -1,3 +1,4 @@
+from algorithms.a_star import AStar
 from algorithms.breadth_first_search import BreadthFirstSearch
 from algorithms.depth_first_search import DepthFirstSearch
 from algorithms.hill_climbing import HillClimbing
@@ -26,3 +27,6 @@ class AlgorithmMode:
         elif the_algorithm in ["hc", "hill climbing"]:
             hc = HillClimbing(self.level_file)
             hc.run()
+        elif the_algorithm in ["a_star"]:
+            a_star = AStar(self.level_file)
+            a_star.run()

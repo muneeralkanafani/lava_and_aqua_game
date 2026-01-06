@@ -4,8 +4,8 @@ from queue import PriorityQueue
 from game_engine import GameEngine
 from game_renderer.game_renderer import GameRenderer
 
-class UniformCostSearch:
-    def __init__(self, level_file, algorithm_name="UCS"):
+class AStar:
+    def __init__(self, level_file, algorithm_name="A Star"):
         self.renderer = GameRenderer(cell_size=60)
         self.engine = GameEngine()
         self.level_file = level_file
@@ -15,7 +15,7 @@ class UniformCostSearch:
 
     def run(self):
         initial_state = element.LevelLoader.load_level(self.level_file)
-        initial_node = Node(initial_state)
+        initial_node = Node(state=initial_state, cost=self.heuristic(initial_state))
         pq = PriorityQueue()
         pq.put(initial_node)
         self.generated_states += 1
@@ -41,7 +41,8 @@ class UniformCostSearch:
                 new_state = self.engine.transition_model(current_state, action)
                 if new_state is None:
                     continue
-                new_cost = self.path_cost(current_node, new_state)
+                heuristic = self.heuristic(new_state)
+                new_cost = heuristic + self.path_cost(current_node, new_state)
                 if new_state not in best_cost or new_cost < best_cost[new_state]:
                     best_cost[new_state] = new_cost
                     new_node = Node(
@@ -69,6 +70,30 @@ class UniformCostSearch:
     def render_each_step(self, state):
         status_text = f"moves: {state.path_cost}"
         self.renderer.render(state, status_text)
+
+    def heuristic(self, state):
+        """
+        the heuristic function (that should calculate for each node) is:
+        the distance from the player to all goal_orbs to the goal
+        e.g: player -> goal_orb_1 -> goal_orb_2 -> goal
+        """
+        heuristic = 0
+        if state.player_position is not None:
+            player_position_dx, player_position_dy = state.player_position
+            goal_position_dx, goal_position_dy = state.goal_position
+            previous_goal_orb_dx, previous_goal_orb_dy = 0, 0
+            for goal_orb_dx, goal_orb_dy in state.goal_orb_position:
+                if previous_goal_orb_dx == 0 and previous_goal_orb_dy == 0:
+                    heuristic += abs(goal_orb_dx - player_position_dx)
+                    heuristic += abs(goal_orb_dy - player_position_dy)
+                else:
+                    heuristic += abs(goal_orb_dx - previous_goal_orb_dx)
+                    heuristic += abs(goal_orb_dy - previous_goal_orb_dy)
+                previous_goal_orb_dx = goal_orb_dx
+                previous_goal_orb_dy = goal_orb_dy
+            heuristic += abs(goal_position_dx - previous_goal_orb_dx)
+            heuristic += abs(goal_position_dy - previous_goal_orb_dy)
+        return heuristic
     
     def path_cost(self, node, new_state):
         """
