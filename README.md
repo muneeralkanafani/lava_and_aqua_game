@@ -8,6 +8,14 @@
 
 **Lava and Aqua** is a small 2D puzzle / grid game written in **Python** using **Pygame**. The objective is simple: collect all the goal-orbs on a level, then reach the goal tile. The player can safely walk on aqua tiles; lava tiles kill the player; movable_blocks can block lava and aqua; lava_walls block player movement, but lava and aqua can move through them; numbered_blocks disappear after a fixed number of moves. This repository contains the game logic, level files and an algorithm mode for automated solving/testing.
 
+## What this project demonstrates
+
+- Python software design and modular project structure
+- Game loop architecture and state management using Pygame
+- Grid-based level representation and rule-based interactions
+- Implementation and comparison of search algorithms (BFS, DFS, UCS, A*)
+- Separation between manual player control and algorithm-driven solving
+
 ## Features
 
 * Play levels locally using the player mode.
